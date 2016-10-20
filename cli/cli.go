@@ -42,7 +42,8 @@ func Run(args []string, proxy_maker ProxyMaker) {
 	if len(args) == 0 {
 		args = append(args, "gfbank")
 	}
-	app := cli.App(filepath.Base(args[0]), "The Grand French Bank")
+	bin := filepath.Base(args[0])
+	app := cli.App(bin, "The Grand French Bank")
 
 	// global options
 	dir_opt := app.StringOpt("dir", "./", "bank directory")
@@ -186,7 +187,7 @@ func Run(args []string, proxy_maker ProxyMaker) {
 			vault_arg := cmd.StringArg("VAULT", "", "vault to open")
 			dest_arg := cmd.StringArg("DEST", "", "output destination")
 			cmd.Action = func() {
-				status := openStatus{vault_name: *vault_arg}
+				status := openStatus{bin: bin, vault_name: *vault_arg}
 				err := bank.HostVaultOpen(*vault_arg, *dest_arg, status)
 				exite(err, "unable to open vault")
 				fmt.Printf("opened %q.\n", *vault_arg)
@@ -236,13 +237,14 @@ func Run(args []string, proxy_maker ProxyMaker) {
 }
 
 type openStatus struct {
+	bin        string
 	vault_name string
 }
 
 func (s openStatus) Started(host net.Addr, host_keyid string) {
 	fmt.Println("join with:")
-	fmt.Printf("    gfbank vault collude %s %s %s\n",
-		s.vault_name, host, host_keyid)
+	fmt.Printf("    %s vault collude %s %s %s\n",
+		s.bin, s.vault_name, host, host_keyid)
 }
 
 func (s openStatus) ShareReceived(keyid, num string, have, needed int) {
