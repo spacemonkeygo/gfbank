@@ -39,7 +39,10 @@ func Run(args []string, proxy_maker ProxyMaker) {
 	var bank *gfbank.Bank
 	var err error
 
-	app := cli.App("gfbank", "The Grand French Bank")
+	if len(args) == 0 {
+		args = append(args, "gfbank")
+	}
+	app := cli.App(filepath.Base(args[0]), "The Grand French Bank")
 
 	// global options
 	dir_opt := app.StringOpt("dir", "./", "bank directory")
