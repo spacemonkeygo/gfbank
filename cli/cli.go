@@ -29,6 +29,12 @@ type ProxyMaker interface {
 	NewProxy(args string) (gfbank.Proxy, error)
 }
 
+type ProxyMakerFunc func(args string) (gfbank.Proxy, error)
+
+func (fn ProxyMakerFunc) NewProxy(args string) (gfbank.Proxy, error) {
+	return fn(args)
+}
+
 func Run(args []string, proxy_maker ProxyMaker) {
 	var bank *gfbank.Bank
 	var err error
@@ -40,21 +46,15 @@ func Run(args []string, proxy_maker ProxyMaker) {
 	debug_opt := app.BoolOpt("debug", false, "debug logging")
 	identity_opt := app.StringOpt("identity", "default",
 		"private key identity")
-	proxy_opt := app.BoolOpt("proxy", proxy_maker != nil, "use proxy")
-	proxy_args_opt := app.StringOpt("proxy_args", "", "proxy args")
+	var proxy_opt *bool
+	var proxy_args_opt *string
+	if proxy_maker != nil {
+		proxy_opt = app.BoolOpt("proxy", true, "use proxy")
+		proxy_args_opt = app.StringOpt("proxy_args", "", "proxy args")
+	}
 
 	var exite func(error, string, ...interface{})
 	var errmsg func(error) string
-
-	new_proxy := func() gfbank.Proxy {
-		var err error
-		if !*proxy_opt {
-			return nil
-		}
-		proxy, err := proxy_maker.NewProxy(*proxy_args_opt)
-		exite(err, "failed to create proxy")
-		return proxy
-	}
 
 	// initialize bank
 	app.Before = func() {
@@ -65,7 +65,14 @@ func Run(args []string, proxy_maker ProxyMaker) {
 			return errorMessage(err, *debug_opt)
 		}
 
-		bank, err = gfbank.NewBank(*dir_opt, *identity_opt, new_proxy(),
+		var proxy gfbank.Proxy
+		if proxy_opt != nil && *proxy_opt {
+			var err error
+			proxy, err = proxy_maker.NewProxy(*proxy_args_opt)
+			exite(err, "failed to create proxy")
+		}
+
+		bank, err = gfbank.NewBank(*dir_opt, *identity_opt, proxy,
 			func(name string) (string, error) {
 				return secureReadline(
 					fmt.Sprintf("%s private key passphrase", name))
