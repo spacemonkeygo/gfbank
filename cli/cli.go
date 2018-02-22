@@ -20,7 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jawher/mow.cli"
+	cli "github.com/jawher/mow.cli"
 	"github.com/spacemonkeygo/errors"
 	"github.com/spacemonkeygo/gfbank"
 )
@@ -68,6 +68,8 @@ func Run(args []string, proxy_maker ProxyMaker) {
 		errmsg = func(err error) string {
 			return errorMessage(err, *debug_opt)
 		}
+
+		exite(gfbank.CheckDeps(), "failed dependency check")
 
 		var proxy gfbank.Proxy
 		if proxy_opt != nil && *proxy_opt {
