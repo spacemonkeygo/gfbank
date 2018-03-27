@@ -129,10 +129,20 @@ func (id *Identity) DecryptShare(encrypted_share *EncryptedShare) (
 		return nil, err
 	}
 
+	// `go vet` caught a bug with the way share labels were generated
+	// (incorrect format specifier). The bug is fixed but since the label is
+	// part of the signed payload, first try to decrypt with the correct share
+	// label and if that fails try again with the broken share label.
 	data, err := rsa.DecryptOAEP(sha256.New(), rand.Reader,
 		id.Key, enc_data, shareLabel(encrypted_share.Number))
 	if err != nil {
-		return nil, Error.Wrap(err)
+		var err_broken error
+		if data, err_broken = rsa.DecryptOAEP(
+			sha256.New(), rand.Reader, id.Key, enc_data,
+			brokenShareLabel(encrypted_share.Number)); err_broken != nil {
+			// return the original error
+			return nil, Error.Wrap(err)
+		}
 	}
 
 	return &Share{

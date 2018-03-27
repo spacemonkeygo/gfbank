@@ -72,5 +72,9 @@ func directoryFiles(dir string) (names []string, err error) {
 }
 
 func shareLabel(share_num string) []byte {
-	return []byte(fmt.Sprintf("share:%d", share_num))
+	return []byte(fmt.Sprintf("share:%s", share_num))
+}
+
+func brokenShareLabel(share_num string) []byte {
+	return []byte(fmt.Sprintf("share:%%!d(string=%s)", share_num))
 }
