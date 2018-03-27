@@ -50,6 +50,7 @@ func HostVaultOpen(identity *Identity, vault *Vault, proxy ListenProxy,
 	if err != nil {
 		return nil, Error.Wrap(err)
 	}
+	defer listener.Close()
 
 	// Create self-signed TLS server config and wrap listener
 	config, err := makeTLSConfig(identity, true)
