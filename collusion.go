@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"fmt"
 	"math/big"
 	"net"
 	"net/rpc"
@@ -33,8 +34,8 @@ var (
 )
 
 type OpenStatus interface {
-	Started(host net.Addr, keyid string)
-	ShareReceived(keyid, number string, have, needed int)
+	Started(host net.Addr, keyid string, identities []string)
+	ShareReceived(who, number string, have, needed int)
 	JoinFailed(err error)
 }
 
@@ -59,10 +60,23 @@ func HostVaultOpen(identity *Identity, vault *Vault, proxy ListenProxy,
 	}
 	listener = tls.NewListener(listener, config)
 
-	status.Started(listener.Addr(), identity.Id)
+	status.Started(listener.Addr(), identity.Id, vault.Identities())
+
+	var shares []Share
+
+	// Check if the identity opening the vault provides any shares
+	if enc_share := vault.LookupKeyId(identity.Id); enc_share != nil {
+		share, err := identity.DecryptShare(enc_share)
+		if err != nil {
+			return nil, err
+		}
+
+		shares = append(shares, *share)
+		status.ShareReceived(renderWho(enc_share.Identity, identity.Id),
+			share.Number, len(shares), vault.Needed)
+	}
 
 	// Keep accepting shares until there is enough to reconstruct the key
-	var shares []Share
 	for len(shares) < vault.Needed {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -188,7 +202,8 @@ func (c *collusionHandler) Join(share *Share, _ *struct{}) (err error) {
 	}
 
 	c.shares = append(c.shares, *share)
-	c.status.ShareReceived(keyid, share.Number, len(c.shares), c.vault.Needed)
+	c.status.ShareReceived(renderWho(enc_share.Identity, keyid),
+		share.Number, len(c.shares), c.vault.Needed)
 	return nil
 }
 
@@ -268,4 +283,8 @@ func makeSelfSignedCert(identity *Identity, server bool) (
 		return nil, Error.Wrap(err)
 	}
 	return cert, nil
+}
+
+func renderWho(name, keyid string) string {
+	return fmt.Sprintf("%s (%s)", name, keyid)
 }

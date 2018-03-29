@@ -177,6 +177,13 @@ func (v *Vault) Audit(keyids *KeyIds) VaultAudit {
 	}
 }
 
+func (v *Vault) Identities() (out []string) {
+	for _, share := range v.Shares {
+		out = append(out, share.Identity)
+	}
+	return out
+}
+
 func CreateVault(name string, data []byte, pubkeys []PublicKey, n, m int) (
 	vault *Vault, err error) {
 

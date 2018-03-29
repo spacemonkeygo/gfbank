@@ -243,15 +243,20 @@ type openStatus struct {
 	vault_name string
 }
 
-func (s openStatus) Started(host net.Addr, host_keyid string) {
+func (s openStatus) Started(host net.Addr, host_keyid string,
+	identities []string) {
+	fmt.Println("collude with:")
+	for _, identity := range identities {
+		fmt.Printf("    %s\n", identity)
+	}
 	fmt.Println("join with:")
 	fmt.Printf("    %s vault collude %s %s %s\n",
 		s.bin, s.vault_name, host, host_keyid)
 }
 
-func (s openStatus) ShareReceived(keyid, num string, have, needed int) {
+func (s openStatus) ShareReceived(who, num string, have, needed int) {
 	fmt.Printf("received share %s from %s (%d of %d)\n",
-		num, keyid, have, needed)
+		num, who, have, needed)
 }
 
 func (s openStatus) JoinFailed(err error) {
@@ -281,9 +286,16 @@ func printVerboseAudits(audits []gfbank.VaultAudit) {
 		if a != 0 {
 			fmt.Println()
 		}
+		safe := 0
+		for _, share := range audit.Shares {
+			if share.Safe {
+				safe++
+			}
+		}
 		fmt.Printf("[%s]\n", audit.Name)
 		fmt.Printf("    status: %s\n", auditStatusString(audit.Status()))
-		fmt.Printf("    needed: %d (of %d)\n", audit.Needed, len(audit.Shares))
+		fmt.Printf("    needed: %d (have %d of %d)\n", audit.Needed, safe,
+			len(audit.Shares))
 		for s, share := range audit.Shares {
 			if s == 0 {
 				fmt.Printf("    shares: ")
