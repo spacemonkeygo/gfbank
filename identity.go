@@ -20,6 +20,8 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -59,7 +61,22 @@ func NewIdentities(dir string, fn PassphraseFunc) (*Identities, error) {
 }
 
 func (ids *Identities) Load(name string) (ident *Identity, err error) {
-	return LoadIdentity(ids.identPath(name), ids.fn)
+	namedPath := ids.identPath(name)
+	_, err = os.Stat(namedPath)
+	if err == nil {
+		return LoadIdentity(namedPath, ids.fn)
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return nil, Error.Wrap(err)
+	}
+
+	_, err = os.Stat(name)
+	if err == nil {
+		return LoadIdentity(name, ids.fn)
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return nil, Error.Wrap(err)
+	}
+
+	return nil, Error.New("identity %q not found", name)
 }
 
 func (ids *Identities) identPath(name string) string {
