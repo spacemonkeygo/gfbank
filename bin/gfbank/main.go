@@ -21,5 +21,5 @@ import (
 )
 
 func main() {
-	gfbankcli.Run(os.Args, nil)
+	cli.Run(os.Args, nil)
 }
